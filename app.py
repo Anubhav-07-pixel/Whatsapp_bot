@@ -304,7 +304,8 @@ def verify_webhook():
             print("✅ WEBHOOK_VERIFIED")
             print("="*60 + "\n")
             # Return the challenge as a simple string with status 200
-            return str(challenge), 200
+            # Force Content-Type to text/plain so Meta accepts it
+            return str(challenge), 200, {'Content-Type': 'text/plain'}
         else:
             # Responds with '403 Forbidden' if verify tokens do not match
             print("❌ VERIFICATION_FAILED: Token mismatch")
@@ -539,4 +540,5 @@ if __name__ == "__main__":
     
 
     app.run(debug=True, port=3000, use_reloader=False)
+
 

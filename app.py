@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 import requests
 import json
 import base64
@@ -27,32 +27,32 @@ PASTE_YOUR_PRIVATE_KEY_HERE_IF_YOU_HAVE_IT
 # ==============================================================
 FD_SCHEME_DATA = {
     "Bajaj Finance - 8.45% p.a*": {
-        "overview_image": "https://money-honey-bot.onrender.com/static/Bajaj_overview.png",
+        "overview_image": "https://github.com/Anubhav-07-pixel/Whatsapp_bot/blob/main/Bajaj_overview.png",
         "product_note_pdf": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
         "filename": "Bajaj_Finance_Product_Note.pdf"
     },
     "Shriram Finance - 8.38% p.a*": {
-        "overview_image": "https://money-honey-bot.onrender.com/static/Shriram_overview.png",
+        "overview_image": "https://github.com/Anubhav-07-pixel/Whatsapp_bot/blob/main/Shriram_overview.png",
         "product_note_pdf": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
         "filename": "Shriram_Finance_Product_Note.pdf"
     },
     "ICICI - 8.51% p.a*": {
-        "overview_image": "https://money-honey-bot.onrender.com/static/ICICI_oveview.jpg",
+        "overview_image": "https://github.com/Anubhav-07-pixel/Whatsapp_bot/blob/main/ICICI_oveview.jpg",
         "product_note_pdf": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
         "filename": "ICICI_Product_Note.pdf"
     },
     "Utkarsh Finance - 9.15% p.a*": {
-        "overview_image": "https://money-honey-bot.onrender.com/static/Utkarsh_oveview.jpg",
+        "overview_image": "https://github.com/Anubhav-07-pixel/Whatsapp_bot/blob/main/Utkarsh_oveview.jpg",
         "product_note_pdf": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
         "filename": "Utkarsh_Finance_Product_Note.pdf"
     },
     "Mahindra Finance - 8.38% p.a*": {
-        "overview_image": "https://money-honey-bot.onrender.com/static/Mahindra_oveview.jpg",
+        "overview_image": "https://github.com/Anubhav-07-pixel/Whatsapp_bot/blob/main/Mahindra_oveview.jpg",
         "product_note_pdf": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
         "filename": "Mahindra_Finance_Product_Note.pdf"
     },
     "HDFC Bank - 7.81% p.a*": {
-        "overview_image": "https://money-honey-bot.onrender.com/static/HDFC_oveview.jpg",
+        "overview_image": "https://github.com/Anubhav-07-pixel/Whatsapp_bot/blob/main/HDFC_oveview.jpg",
         "product_note_pdf": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
         "filename": "HDFC_Bank_Product_Note.pdf"
     }
@@ -281,219 +281,228 @@ def home():
 
 @app.route('/webhook', methods=['GET'])
 def verify_webhook():
-    """Verifies the webhook with Meta"""
+    """Verifies the webhook with Meta - FIXED VERSION"""
     print("\n" + "="*60)
     print("🔐 WEBHOOK VERIFICATION REQUEST RECEIVED")
     print("="*60)
     
-    # Parse params from the webhook verification request
-    mode = request.args.get("hub.mode")
-    token = request.args.get("hub.verify_token")
-    challenge = request.args.get("hub.challenge")
-    
-    print(f"   Mode: {mode}")
-    print(f"   Token Received: {token}")
-    print(f"   Token Expected: money_honey_secret_123")
-    print(f"   Challenge: {challenge}")
-    print("="*60)
-    
-    # Check if a token and mode were sent
-    if mode and token:
-        # Check the mode and token sent are correct
-        if mode == "subscribe" and token == "money_honey_secret_123":
-            print("✅ WEBHOOK_VERIFIED")
+    try:
+        # Get query parameters
+        mode = request.args.get("hub.mode")
+        token = request.args.get("hub.verify_token")
+        challenge = request.args.get("hub.challenge")
+        
+        print(f"   Mode: {mode}")
+        print(f"   Token Received: {token}")
+        print(f"   Token Expected: {VERIFY_TOKEN}")
+        print(f"   Challenge: {challenge}")
+        
+        # Verify the token and mode
+        if mode == "subscribe" and token == VERIFY_TOKEN:
+            print("✅ WEBHOOK VERIFIED SUCCESSFULLY!")
             print("="*60 + "\n")
-            # Return the challenge as a simple string with status 200
-            # Force Content-Type to text/plain so Meta accepts it
-            return str(challenge), 200, {'Content-Type': 'text/plain'}
+            
+            # Return ONLY the challenge string with explicit text/plain content type
+            # This is what Meta expects
+            return Response(
+                response=challenge,
+                status=200,
+                mimetype='text/plain'
+            )
         else:
-            # Responds with '403 Forbidden' if verify tokens do not match
-            print("❌ VERIFICATION_FAILED: Token mismatch")
+            print("❌ VERIFICATION FAILED: Token mismatch or wrong mode")
+            print(f"   Expected token: {VERIFY_TOKEN}")
+            print(f"   Received token: {token}")
             print("="*60 + "\n")
-            return "Forbidden", 403
-    
-    print("❌ VERIFICATION_FAILED: Missing mode or token")
-    print("="*60 + "\n")
-    return "Bad Request", 400
+            return Response("Forbidden", status=403)
+            
+    except Exception as e:
+        print(f"❌ ERROR DURING VERIFICATION: {e}")
+        print("="*60 + "\n")
+        return Response("Bad Request", status=400)
 
 @app.route('/webhook', methods=['POST'])
 def handle_messages():
     """Handles incoming messages and Flow responses"""
-    body = request.get_json()
-    
-    # ============================================
-    # DETAILED LOGGING FOR EVERY WEBHOOK
-    # ============================================
-    print("\n" + "="*60)
-    print("🔔 NEW WEBHOOK RECEIVED!")
-    print("="*60)
-    print(f"📩 Full Webhook Body:\n{json.dumps(body, indent=2)}")
-    print("="*60 + "\n")
+    try:
+        body = request.get_json()
+        
+        # ============================================
+        # DETAILED LOGGING FOR EVERY WEBHOOK
+        # ============================================
+        print("\n" + "="*60)
+        print("🔔 NEW WEBHOOK RECEIVED!")
+        print("="*60)
+        print(f"📩 Full Webhook Body:\n{json.dumps(body, indent=2)}")
+        print("="*60 + "\n")
 
-    if body.get("object"):
-        try:
-            if (body.get("entry") and 
-                body["entry"][0].get("changes") and 
-                body["entry"][0]["changes"][0]["value"].get("messages")):
+        if not body or not body.get("object"):
+            print("⚠️ Invalid webhook body")
+            return jsonify({"status": "error", "message": "Invalid body"}), 400
 
-                message = body["entry"][0]["changes"][0]["value"]["messages"][0]
-                sender_mobile = message["from"]
+        if (body.get("entry") and 
+            body["entry"][0].get("changes") and 
+            body["entry"][0]["changes"][0]["value"].get("messages")):
+
+            message = body["entry"][0]["changes"][0]["value"]["messages"][0]
+            sender_mobile = message["from"]
+            
+            print(f"👤 Sender: {sender_mobile}")
+            print(f"📝 Message Type: {message['type']}")
+            print(f"📄 Message Content: {json.dumps(message, indent=2)}\n")
+
+            # ==============================================
+            # A. HANDLE TEXT MESSAGES
+            # ==============================================
+            if message["type"] == "text":
+                text = message["text"]["body"].strip()
                 
-                print(f"👤 Sender: {sender_mobile}")
-                print(f"📝 Message Type: {message['type']}")
-                print(f"📄 Message Content: {json.dumps(message, indent=2)}\n")
-
-                # ==============================================
-                # A. HANDLE TEXT MESSAGES
-                # ==============================================
-                if message["type"] == "text":
-                    text = message["text"]["body"].strip()
+                print(f"💬 Text Message Received: '{text}'")
+                
+                # Check if user typed "0" to go back to main menu
+                if text == "0":
+                    print(f"🔄 User requested main menu")
+                    user_sessions[sender_mobile] = None  # Clear session
+                    send_welcome_and_main_menu(sender_mobile)
+                
+                # Check if user is in PAN request state
+                elif user_sessions.get(sender_mobile) == "awaiting_pan":
+                    pan = text.upper()
+                    print(f"🔍 Validating PAN: {pan}")
                     
-                    print(f"💬 Text Message Received: '{text}'")
-                    
-                    # Check if user typed "0" to go back to main menu
-                    if text == "0":
-                        print(f"🔄 User requested main menu")
+                    if validate_pan(pan):
+                        print(f"✅ Valid PAN received")
                         user_sessions[sender_mobile] = None  # Clear session
-                        send_welcome_and_main_menu(sender_mobile)
-                    
-                    # Check if user is in PAN request state
-                    elif user_sessions.get(sender_mobile) == "awaiting_pan":
-                        pan = text.upper()
-                        print(f"🔍 Validating PAN: {pan}")
-                        
-                        if validate_pan(pan):
-                            print(f"✅ Valid PAN received")
-                            user_sessions[sender_mobile] = None  # Clear session
-                            send_whatsapp_message(sender_mobile, "text", {
-                                "body": f"Thank you! Your PAN *{pan}* has been received.\n\nWe are working on processing your request. Our team will contact you shortly."
-                            })
-                        else:
-                            print(f"❌ Invalid PAN format")
-                            send_whatsapp_message(sender_mobile, "text", {
-                                "body": "❌ Invalid PAN format!\n\nPlease provide a valid PAN Number in the format: *ABCDE1234F*\n(5 letters, 4 digits, 1 letter - all in CAPITAL)"
-                            })
-                    
-                    # Otherwise show main menu
-                    else:
-                        print(f"🚀 Sending Welcome + Main Menu to {sender_mobile}...")
-                        send_welcome_and_main_menu(sender_mobile)
-
-                # ==============================================
-                # B. HANDLE FLOW RESPONSES (nfm_reply)
-                # ==============================================
-                elif message["type"] == "interactive" and "nfm_reply" in message["interactive"]:
-                    
-                    # Decrypt the flow data
-                    encrypted_payload = message["interactive"]["nfm_reply"]["response_json"]
-                    decrypted_data = decrypt_flow_data(encrypted_payload)
-                    
-                    print(f"✅ Flow Response Decrypted: {json.dumps(decrypted_data, indent=2)}")
-                    
-                    screen = decrypted_data.get("screen", "")
-                    
-                    # --- CASE 1: MAIN MENU SUBMISSION ---
-                    if screen == "PRODUCT_MENU":
-                        # Get the selected category (try multiple possible field names)
-                        category = (decrypted_data.get("category") or 
-                                  decrypted_data.get("selected_category") or
-                                  decrypted_data.get("product_category"))
-                        
-                        print(f"📂 Category selected: {category}")
-                        
-                        if category in ["portfolio", "transaction_report", "cgl_report"]:
-                            # Mark user as awaiting PAN
-                            user_sessions[sender_mobile] = "awaiting_pan"
-                            
-                            # Ask for PAN number
-                            send_whatsapp_message(sender_mobile, "text", {
-                                "body": "Please provide your PAN Number (in capital letters)\n\nExample: *ABCDE1234F*"
-                            })
-                        
-                        elif category == "fixed_deposits":
-                            # Show FD selection flow
-                            send_fd_selection_flow(sender_mobile)
-                        
-                        elif category in ["mutual_funds", "bonds", "ncd"]:
-                            # Work in progress message
-                            send_whatsapp_message(sender_mobile, "text", {
-                                "body": "We are currently working on this feature. 🚧\n\nIt will be available soon!\n\nType *0* to go back to the main menu."
-                            })
-
-                    # --- CASE 2: FD SELECTION SCREEN ---
-                    elif screen == "FD_SELECTION_SCREEN":
-                        # Get the selected FD scheme (try multiple possible field names)
-                        selected_scheme = (decrypted_data.get("fd_choice") or 
-                                         decrypted_data.get("selected_scheme") or
-                                         decrypted_data.get("scheme"))
-                        
-                        print(f"🏦 FD Scheme selected: {selected_scheme}")
-                        
-                        if selected_scheme:
-                            # Send buttons for overview and product note
-                            send_fd_buttons(sender_mobile, selected_scheme)
-
-                    # --- CASE 3: APPOINTMENT BOOKING ---
-                    elif screen == "APPOINTMENT_BOOKING":
-                        appointment_date = decrypted_data.get("appointment_date", "N/A")
-                        appointment_time = decrypted_data.get("appointment_time", "N/A")
-                        customer_name = decrypted_data.get("name", "N/A")
-                        
-                        print(f"📅 Appointment booked:")
-                        print(f"   Name: {customer_name}")
-                        print(f"   Date: {appointment_date}")
-                        print(f"   Time: {appointment_time}")
-                        
                         send_whatsapp_message(sender_mobile, "text", {
-                            "body": f"✅ *Appointment Confirmed!*\n\nThank you, *{customer_name}*!\n\nYour appointment has been scheduled:\n📅 Date: {appointment_date}\n⏰ Time: {appointment_time}\n\nOur advisor will contact you soon.\n\nType *0* to return to main menu."
+                            "body": f"Thank you! Your PAN *{pan}* has been received.\n\nWe are working on processing your request. Our team will contact you shortly."
+                        })
+                    else:
+                        print(f"❌ Invalid PAN format")
+                        send_whatsapp_message(sender_mobile, "text", {
+                            "body": "❌ Invalid PAN format!\n\nPlease provide a valid PAN Number in the format: *ABCDE1234F*\n(5 letters, 4 digits, 1 letter - all in CAPITAL)"
+                        })
+                
+                # Otherwise show main menu
+                else:
+                    print(f"🚀 Sending Welcome + Main Menu to {sender_mobile}...")
+                    send_welcome_and_main_menu(sender_mobile)
+
+            # ==============================================
+            # B. HANDLE FLOW RESPONSES (nfm_reply)
+            # ==============================================
+            elif message["type"] == "interactive" and "nfm_reply" in message["interactive"]:
+                
+                # Decrypt the flow data
+                encrypted_payload = message["interactive"]["nfm_reply"]["response_json"]
+                decrypted_data = decrypt_flow_data(encrypted_payload)
+                
+                print(f"✅ Flow Response Decrypted: {json.dumps(decrypted_data, indent=2)}")
+                
+                screen = decrypted_data.get("screen", "")
+                
+                # --- CASE 1: MAIN MENU SUBMISSION ---
+                if screen == "PRODUCT_MENU":
+                    # Get the selected category (try multiple possible field names)
+                    category = (decrypted_data.get("category") or 
+                              decrypted_data.get("selected_category") or
+                              decrypted_data.get("product_category"))
+                    
+                    print(f"📂 Category selected: {category}")
+                    
+                    if category in ["portfolio", "transaction_report", "cgl_report"]:
+                        # Mark user as awaiting PAN
+                        user_sessions[sender_mobile] = "awaiting_pan"
+                        
+                        # Ask for PAN number
+                        send_whatsapp_message(sender_mobile, "text", {
+                            "body": "Please provide your PAN Number (in capital letters)\n\nExample: *ABCDE1234F*"
+                        })
+                    
+                    elif category == "fixed_deposits":
+                        # Show FD selection flow
+                        send_fd_selection_flow(sender_mobile)
+                    
+                    elif category in ["mutual_funds", "bonds", "ncd"]:
+                        # Work in progress message
+                        send_whatsapp_message(sender_mobile, "text", {
+                            "body": "We are currently working on this feature. 🚧\n\nIt will be available soon!\n\nType *0* to go back to the main menu."
                         })
 
-                # ==============================================
-                # C. HANDLE BUTTON CLICKS
-                # ==============================================
-                elif message["type"] == "interactive" and "button_reply" in message["interactive"]:
-                    button_id = message["interactive"]["button_reply"]["id"]
+                # --- CASE 2: FD SELECTION SCREEN ---
+                elif screen == "FD_SELECTION_SCREEN":
+                    # Get the selected FD scheme (try multiple possible field names)
+                    selected_scheme = (decrypted_data.get("fd_choice") or 
+                                     decrypted_data.get("selected_scheme") or
+                                     decrypted_data.get("scheme"))
                     
-                    print(f"🔘 Button clicked: {button_id}")
+                    print(f"🏦 FD Scheme selected: {selected_scheme}")
                     
-                    # Extract scheme name from button_id
-                    if button_id.startswith("overview_"):
-                        scheme_name = button_id.replace("overview_", "")
-                        
-                        if scheme_name in FD_SCHEME_DATA:
-                            # Send overview image
-                            send_whatsapp_message(sender_mobile, "image", {
-                                "link": FD_SCHEME_DATA[scheme_name]["overview_image"],
-                                "caption": f"📊 Here is the FD Scheme Overview for *{scheme_name}*"
-                            })
-                            
-                            # Send appointment flow after 2 seconds
-                            send_appointment_flow(sender_mobile)
-                    
-                    elif button_id.startswith("note_"):
-                        scheme_name = button_id.replace("note_", "")
-                        
-                        if scheme_name in FD_SCHEME_DATA:
-                            # Send product note PDF
-                            send_whatsapp_message(sender_mobile, "document", {
-                                "link": FD_SCHEME_DATA[scheme_name]["product_note_pdf"],
-                                "filename": FD_SCHEME_DATA[scheme_name]["filename"]
-                            })
-                            
-                            # Send appointment flow after 2 seconds
-                            send_appointment_flow(sender_mobile)
+                    if selected_scheme:
+                        # Send buttons for overview and product note
+                        send_fd_buttons(sender_mobile, selected_scheme)
 
-        except Exception as e:
-            print(f"\n❌ ERROR PROCESSING WEBHOOK ❌")
-            print(f"Error Message: {e}")
-            import traceback
-            print(f"Full Traceback:\n{traceback.format_exc()}")
-            print("="*60 + "\n")
+                # --- CASE 3: APPOINTMENT BOOKING ---
+                elif screen == "APPOINTMENT_BOOKING":
+                    appointment_date = decrypted_data.get("appointment_date", "N/A")
+                    appointment_time = decrypted_data.get("appointment_time", "N/A")
+                    customer_name = decrypted_data.get("name", "N/A")
+                    
+                    print(f"📅 Appointment booked:")
+                    print(f"   Name: {customer_name}")
+                    print(f"   Date: {appointment_date}")
+                    print(f"   Time: {appointment_time}")
+                    
+                    send_whatsapp_message(sender_mobile, "text", {
+                        "body": f"✅ *Appointment Confirmed!*\n\nThank you, *{customer_name}*!\n\nYour appointment has been scheduled:\n📅 Date: {appointment_date}\n⏰ Time: {appointment_time}\n\nOur advisor will contact you soon.\n\nType *0* to return to main menu."
+                    })
 
-        return "EVENT_RECEIVED", 200
-    else:
-        print("⚠️ Webhook received but 'object' field is missing")
-        return "Not Found", 404
+            # ==============================================
+            # C. HANDLE BUTTON CLICKS
+            # ==============================================
+            elif message["type"] == "interactive" and "button_reply" in message["interactive"]:
+                button_id = message["interactive"]["button_reply"]["id"]
+                
+                print(f"🔘 Button clicked: {button_id}")
+                
+                # Extract scheme name from button_id
+                if button_id.startswith("overview_"):
+                    scheme_name = button_id.replace("overview_", "")
+                    
+                    if scheme_name in FD_SCHEME_DATA:
+                        # Send overview image
+                        send_whatsapp_message(sender_mobile, "image", {
+                            "link": FD_SCHEME_DATA[scheme_name]["overview_image"],
+                            "caption": f"📊 Here is the FD Scheme Overview for *{scheme_name}*"
+                        })
+                        
+                        # Send appointment flow after 2 seconds
+                        send_appointment_flow(sender_mobile)
+                
+                elif button_id.startswith("note_"):
+                    scheme_name = button_id.replace("note_", "")
+                    
+                    if scheme_name in FD_SCHEME_DATA:
+                        # Send product note PDF
+                        send_whatsapp_message(sender_mobile, "document", {
+                            "link": FD_SCHEME_DATA[scheme_name]["product_note_pdf"],
+                            "filename": FD_SCHEME_DATA[scheme_name]["filename"]
+                        })
+                        
+                        # Send appointment flow after 2 seconds
+                        send_appointment_flow(sender_mobile)
+
+        # Return 200 OK to acknowledge receipt
+        return jsonify({"status": "success"}), 200
+
+    except Exception as e:
+        print(f"\n❌ ERROR PROCESSING WEBHOOK ❌")
+        print(f"Error Message: {e}")
+        import traceback
+        print(f"Full Traceback:\n{traceback.format_exc()}")
+        print("="*60 + "\n")
+        
+        # Still return 200 to prevent Meta from retrying
+        return jsonify({"status": "error", "message": str(e)}), 200
 
 # ==============================================================
 # 6. HEALTH CHECK ENDPOINT
@@ -519,27 +528,26 @@ if __name__ == "__main__":
     print("="*60)
     print(f"📱 Phone Number ID: {PHONE_NUMBER_ID}")
     print(f"🔐 Verify Token: {VERIFY_TOKEN}")
-    print(f"🌐 Server running on: http://localhost:3000")
-    print(f"📡 Webhook endpoint: http://localhost:3000/webhook")
+    print(f"🌐 Server running on: http://0.0.0.0:3000")
+    print(f"📡 Webhook endpoint: /webhook")
     print("="*60)
-    print("⚠️  IMPORTANT: Make sure ngrok is running!")
-    print("    Run: ngrok http 3000")
-    print("    Then set ngrok URL in Meta Webhook settings")
+    print("\n💡 DEPLOYMENT CHECKLIST:")
+    print("   ✓ Verify Token configured")
+    print("   ✓ WhatsApp Token configured")
+    print("   ✓ Phone Number ID configured")
+    print("   ⚠️  Add Private Key for Flow decryption")
     print("="*60)
-    print("\n💡 QUICK SETUP GUIDE:")
-    print("   1. Start ngrok: ngrok http 3000")
-    print("   2. Copy the https URL from ngrok")
-    print("   3. Go to Meta Developer Dashboard")
-    print("   4. WhatsApp → Configuration → Edit Webhook")
-    print("   5. Set Callback URL: https://YOUR_NGROK_URL/webhook")
-    print("   6. Set Verify Token: money_honey_secret_123")
-    print("   7. Click Verify and Save")
-    print("   8. Subscribe to 'messages' webhook field")
-    print("   9. Send 'Hi' from WhatsApp to test!")
+    print("\n🔧 META WEBHOOK SETUP:")
+    print("   1. Go to Meta Developer Dashboard")
+    print("   2. WhatsApp → Configuration → Webhook")
+    print("   3. Callback URL: https://YOUR_RENDER_URL/webhook")
+    print("   4. Verify Token: money_honey_secret_123")
+    print("   5. Click 'Verify and Save'")
+    print("   6. Subscribe to 'messages' field")
     print("="*60 + "\n")
     
-
-    app.run(debug=True, port=3000, use_reloader=False)
+    # Use 0.0.0.0 for Render deployment
+    app.run(host='0.0.0.0', debug=True, port=3000, use_reloader=False)
 
 
 
